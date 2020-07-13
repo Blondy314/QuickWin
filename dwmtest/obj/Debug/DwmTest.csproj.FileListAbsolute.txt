@@ -1,0 +1,9 @@
+c:\projects\QuickWin\dwmtest\bin\Debug\DwmTest.exe
+c:\projects\QuickWin\dwmtest\bin\Debug\DwmTest.pdb
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.csprojAssemblyReference.cache
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.Form1.resources
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.Properties.Resources.resources
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.csproj.GenerateResource.cache
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.csproj.CoreCompileInputs.cache
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.exe
+c:\projects\QuickWin\dwmtest\obj\Debug\DwmTest.pdb
