@@ -7,21 +7,20 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using BrightIdeasSoftware;
-using MetroFramework;
-using MetroFramework.Forms;
+using Timer = System.Windows.Forms.Timer;
+using System.Management;
 
 namespace QuickWin
 {
     // TODO -
-    // add run time + more details on process
-    // Not responding
-    // Replace task manager
     // Show CPU
-    // Suspend
     // cmdline
+    // handles
 
     public partial class WinForm : Form
     {
@@ -29,6 +28,7 @@ namespace QuickWin
         private bool _notified;
         private ProcInfo[] _procs;
         private Timer _refreshTimer;
+        private Dictionary<int, CpuInfo> _times;
         private readonly NotifyIcon _notifyIcon;
 
         public WinForm()
@@ -48,7 +48,17 @@ namespace QuickWin
                 BalloonTipTitle = @"Quick Win"
             };
 
+            _procs = new ProcInfo[0];
+            _times = new Dictionary<int, CpuInfo>();
+
             InitializeComponent();
+        }
+
+        public static bool IsAdministrator()
+        {
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
 
         private void RegisterHotKey()
@@ -71,6 +81,11 @@ namespace QuickWin
         {
             try
             {
+                if (IsAdministrator())
+                {
+                    Text = $@"{Text} (Admin)";
+                }
+                
                 RegisterHotKey();
 
                 lstView.Columns.AddRange(new ColumnHeader[]
@@ -78,7 +93,10 @@ namespace QuickWin
                     new OLVColumn("Id", "Id"),
                     new OLVColumn("Name", "Name"),
                     new OLVColumn("Title", "Title"),
-              //      new OLVColumn("Start Time", "StartTime"),
+                    new OLVColumn("User", "User"),
+            //        new OLVColumn("CPU", "CPU"),
+                    new OLVColumn("Start Time", "StartTime"),
+                    new OLVColumn("Command", "Command")
                 });
 
                 lstView.ContextMenu = new ContextMenu(new[]
@@ -90,7 +108,7 @@ namespace QuickWin
                 });
 
                 lstView.ItemsChanged += LstViewOnItemsChanged;
-              //  lstView.GridLines = true;
+                lstView.GridLines = true;
                 lstView.KeyDown += LstViewOnKeyDown;
 
                 lstLog.GridLines = true;
@@ -110,6 +128,127 @@ namespace QuickWin
                 Log("Getting processes..");
 
                 await GetProcs();
+
+             //   ThreadPool.QueueUserWorkItem(CpuThread);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private static string GetCommandLine(Process process)
+        {
+            try
+            {
+                string cmdLine = null;
+                using (var searcher = new ManagementObjectSearcher(
+                    $"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {process.Id}"))
+                {
+                    // By definition, the query returns at most 1 match, because the process 
+                    // is looked up by ID (which is unique by definition).
+                    using (var matchEnum = searcher.Get().GetEnumerator())
+                    {
+                        if (matchEnum.MoveNext()) // Move to the 1st item.
+                        {
+                            cmdLine = matchEnum.Current["CommandLine"]?.ToString();
+                        }
+                    }
+                }
+                if (cmdLine == null)
+                {
+                    // Not having found a command line implies 1 of 2 exceptions, which the
+                    // WMI query masked:
+                    // An "Access denied" exception due to lack of privileges.
+                    // A "Cannot process request because the process (<pid>) has exited."
+                    // exception due to the process having terminated.
+                    // We provoke the same exception again simply by accessing process.MainModule.
+                    var dummy = process.MainModule; // Provoke exception.
+                }
+
+                return cmdLine;
+            }
+            catch
+            {
+                return "<error>";
+            }
+        }
+
+        public class CpuInfo
+        {
+            public DateTime lastTime;
+            public TimeSpan lastTotalProcessorTime;
+            public DateTime curTime;
+            public TimeSpan curTotalProcessorTime;
+        }
+
+        private void SetVal(ProcInfo proc, string val)
+        {
+            try
+            {
+                if (InvokeRequired)
+                {
+                    BeginInvoke((Action)(() => SetVal(proc, val)));
+                    return;
+                }
+
+                var objects = lstView.Objects.Cast<ProcInfo>().ToArray();
+
+                for (var i = 0; i < objects.Length; ++i)
+                {
+                    if (objects[i].Id != proc.Id)
+                    {
+                        continue;
+                    }
+
+                    lstView.Items[i].SubItems[4].Text = val;
+                    break;
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private void CpuThread(object state)
+        {
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        foreach (var proc in lstView.Objects.Cast<ProcInfo>())
+                        {
+                            if (!_times.ContainsKey(proc.Id))
+                            {
+                                _times.Add(proc.Id, new CpuInfo
+                                {
+                                    lastTime = DateTime.Now,
+                                    lastTotalProcessorTime = proc.Proc.TotalProcessorTime
+                                });
+                                continue;
+                            }
+
+                            _times[proc.Id].curTime = DateTime.Now;
+                            _times[proc.Id].curTotalProcessorTime = proc.Proc.TotalProcessorTime;
+
+                            var cpuUsage = (_times[proc.Id].curTotalProcessorTime.TotalMilliseconds - _times[proc.Id].lastTotalProcessorTime.TotalMilliseconds) / _times[proc.Id].curTime.Subtract(_times[proc.Id].lastTime).TotalMilliseconds / Convert.ToDouble(Environment.ProcessorCount);
+
+                            SetVal(proc, (cpuUsage * 100).ToString());
+
+                            _times[proc.Id].lastTime = _times[proc.Id].curTime;
+                            _times[proc.Id].lastTotalProcessorTime = _times[proc.Id].curTotalProcessorTime;
+                        }
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+
+                    Thread.Sleep(250);
+                }
             }
             catch
             {
@@ -174,18 +313,43 @@ namespace QuickWin
             }
         }
 
-        private ProcInfo GetProcInfo(Process proc)
+        [DllImport("Wtsapi32.dll")]
+        private static extern bool WTSQuerySessionInformation(IntPtr hServer, int sessionId, WtsInfoClass wtsInfoClass, out IntPtr ppBuffer, out int pBytesReturned);
+        [DllImport("Wtsapi32.dll")]
+        private static extern void WTSFreeMemory(IntPtr pointer);
+
+        private enum WtsInfoClass
+        {
+            WTSUserName = 5,
+            WTSDomainName = 7,
+        }
+
+        private static string GetUsername(int sessionId, bool prependDomain = true)
         {
             try
             {
-                return new ProcInfo
+                var username = "SYSTEM";
+                if (!WTSQuerySessionInformation(IntPtr.Zero, 
+                    sessionId, 
+                    WtsInfoClass.WTSUserName, 
+                    out var buffer,
+                    out var strLen) || strLen <= 1)
                 {
-                    Id = proc.Id,
-                    Name = proc.ProcessName,
-                    Title = proc.MainWindowTitle,
-                    //StartTime = GetStartTime(proc),
-                    Proc = proc
-                };
+                    return username;
+                }
+
+                username = Marshal.PtrToStringAnsi(buffer);
+                WTSFreeMemory(buffer);
+                if (prependDomain)
+                {
+                    if (WTSQuerySessionInformation(IntPtr.Zero, sessionId, WtsInfoClass.WTSDomainName, out buffer, out strLen) && strLen > 1)
+                    {
+                        username = Marshal.PtrToStringAnsi(buffer) + "\\" + username;
+                        WTSFreeMemory(buffer);
+                    }
+                }
+
+                return username;
             }
             catch
             {
@@ -193,7 +357,38 @@ namespace QuickWin
             }
         }
 
-        private static  string[] excludeProcs = new[]
+        private ProcInfo GetProcInfo(Process proc)
+        {
+            try
+            {
+                var procInfo = new ProcInfo
+                {
+                    Id = proc.Id,
+                    Name = proc.ProcessName,
+                    Title = proc.MainWindowTitle,
+                    User = GetUsername(proc.SessionId),
+                    StartTime = GetStartTime(proc),
+                    Proc = proc,
+                    Command = GetCommandLine(proc)
+                };
+
+                proc.EnableRaisingEvents = true;
+                proc.Exited += (s, e) => ProcOnExited(procInfo);
+
+                return procInfo;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void ProcOnExited(ProcInfo proc)
+        {
+            lstView.RemoveObject(proc);
+        }
+
+        private static readonly string[] ExcludeProcs = 
         {
             "ApplicationFrameHost",
             "ScriptedSandbox32",
@@ -201,70 +396,98 @@ namespace QuickWin
             "ScriptedSandbox64"
         };
 
+        public void ExecuteAsAdmin()
+        {
+            var proc = new Process
+            {
+                StartInfo =
+                {
+                    FileName = System.Reflection.Assembly.GetExecutingAssembly().Location,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                }
+            };
+
+            if (proc.Start())
+            {
+                Application.Exit();
+            }
+        }
+
         private async Task GetProcs()
         {
             try
             {
                 ProcInfo[] procs = null;
 
+                var onlyWindow = !chkAllProcs.Checked;
+                var first = _procs.Length == 0;
+
                 await Task.Run(() =>
                 {
                     var allProcs = Process.GetProcesses();
-                    procs = allProcs.
+
+                    if (onlyWindow)
+                    {
+                        allProcs = allProcs.Where(p => p.MainWindowHandle != IntPtr.Zero).ToArray();
+                        _procs = _procs?.Where(p => p.Proc.MainWindowHandle != IntPtr.Zero).ToArray();
+                    }
+
+                    var newProcs = allProcs.Where(p => _procs.All(p1 => p1.Id != p.Id)).ToArray();
+
+                    if (newProcs.Length == 0)
+                    {
+                        return;
+                    }
+
+                    procs = newProcs.
+                        AsParallel().
+                        Where(p => !ExcludeProcs.Contains(p.ProcessName)).
                         Select(GetProcInfo).
                         Where(p => p != null).
-                        Where(p => !excludeProcs.Contains(p.Name)).
                         OrderBy(p => p.Name).
                         ThenBy(proc => proc.StartTime).ToArray();
                 });
 
-                if (!chkAllProcs.Checked)
-                {
-                    procs = procs.Where(p => p.Proc.MainWindowHandle != IntPtr.Zero).ToArray();
-                    _procs = _procs?.Where(p => p.Proc.MainWindowHandle != IntPtr.Zero).ToArray();
-                }
+                _procs = procs;
 
-                if (_procs == null)
+                if (first)
                 {
-                    _procs = procs;
-
                     Log($"Found {procs.Length} processes.");
 
                     lstView.SetObjects(procs);
                     lstView.AutoResizeColumns();
                     lstView.CalculateReasonableTileSize();
-                    lstView.Columns[2].Width = 200;
-                    return;
+
+                    SetColumnWidth("Title", 150);
                 }
-
-                var closedProcs = _procs.Where(p => procs.All(p1 => p1.Id != p.Id)).ToArray();
-                var newProcs = procs.Where(p => _procs.All(p1 => p1.Id != p.Id)).ToArray();
-
-                if (newProcs.Length > 0)
+                else
                 {
-                    var exist = lstView.Objects.Cast<ProcInfo>().Where(p => newProcs.Any(p1 => p1.Id == p.Id)).ToArray();
-                    if (exist.Length == 0)
+                    var exist = lstView.Objects.Cast<ProcInfo>().Where(p => procs.Any(p1 => p1.Id == p.Id)).ToArray();
+                    if (exist.Length > 0)
                     {
-                        Log($"{newProcs.Length} processes created", color: Color.DarkBlue);
-                        lstView.AddObjects(newProcs);
-                        lstView.Sort("Name");
+                        return;
                     }
-                }
 
-                if (closedProcs.Length > 0)
-                {
-                    var closedObjects = lstView.Objects.Cast<ProcInfo>().Where(p => closedProcs.Any(p1 => p1.Id == p.Id)).ToArray();
-                   
-                    Log($"{closedProcs.Length} processes closed", color: Color.Gray);
-                    lstView.RemoveObjects(closedObjects);
+                    lstView.AddObjects(procs);
+                    lstView.Sort("Name");
                 }
-
-                _procs = procs;
             }
             catch(Exception ex)
             {
                 Log("Failed to get processes", ex);
             }
+        }
+
+        private void SetColumnWidth(string title, int width)
+        {
+            var col = lstView.Columns.Cast<OLVColumn>().FirstOrDefault(c => c.Text == title);
+            if (col == null)
+            {
+                throw new Exception("Failed to get column - " + title);
+            }
+
+            col.Width = width;
         }
 
         private string ProcStr(ProcInfo proc)
@@ -446,7 +669,7 @@ namespace QuickWin
             Show();
             lstView.SelectedIndex = -1;
 
-            txtFilter.Text = null;
+            txtFilter.Focus();
             WindowState = FormWindowState.Normal;
         }
 
@@ -810,30 +1033,14 @@ namespace QuickWin
             lstView_SelectedIndexChanged(sender, e);
         }
 
-        private async void btnRefresh_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                Log("Refreshing..");
-
-                _procs = null;
-                Clear();
-
-                await GetProcs();
-            }
-            catch (Exception ex)
-            {
-                Log("Failed to refresh", ex);
-            }
-        }
-
         public class ProcInfo
         {
             public int Id;
             public string Name;
             public string Title;
+            public string User;
             public string StartTime;
-            public string Args;
+            public string Command;
 
             public Process Proc;
         }
@@ -852,24 +1059,46 @@ namespace QuickWin
             SetItemCount();
         }
 
+        private async void btnRefresh_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Log("Refreshing..");
+                toolStrip.Enabled = false;
+
+                _procs = new ProcInfo[0];
+                Clear();
+
+                await GetProcs();
+            }
+            catch (Exception ex)
+            {
+                Log("Failed to refresh", ex);
+            }
+            finally
+            {
+                toolStrip.Enabled = true;
+            }
+        }
+
         private void chkAllProcs_CheckedChanged(object sender, EventArgs e)
         {
             try
             {
                 Clear();
 
-                var procs = _procs;
-               
                 if (chkAllProcs.Checked)
                 {
                     Log("Showing all processes");
+                    btnRefresh_Click(null, null);
+                    return;
                 }
-                else
-                {
-                    Log("Showing only processes with window");
-                    procs = procs.Where(p => p.Proc.MainWindowHandle != IntPtr.Zero).ToArray();
-                }
-            
+
+                var procs = _procs;
+
+                Log("Showing only processes with window");
+                procs = procs.Where(p => p.Proc.MainWindowHandle != IntPtr.Zero).ToArray();
+
                 lstView.SetObjects(procs);
                 SetItemCount();
             }
@@ -885,12 +1114,7 @@ namespace QuickWin
         {
             _lastHit = e.Location;
         }
-
-        private void metroTile1_Click(object sender, EventArgs e)
-        {
-            metroStyleManager.Theme = metroStyleManager.Theme == MetroThemeStyle.Light ? MetroThemeStyle.Dark : MetroThemeStyle.Light;
-        }
-
+        
         private void WinForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             _notifyIcon.Dispose();
@@ -900,19 +1124,24 @@ namespace QuickWin
         {
             UpdateThumb();
         }
+
+        private void tsAdmin_Click(object sender, EventArgs e)
+        {
+            ExecuteAsAdmin();
+        }
     }
 
     public static class ListExtensions
     {
         public static DataTable ToDataTable<T>(this List<T> iList)
         {
-            DataTable dataTable = new DataTable();
-            PropertyDescriptorCollection propertyDescriptorCollection =
+            var dataTable = new DataTable();
+            var propertyDescriptorCollection =
                 TypeDescriptor.GetProperties(typeof(T));
-            for (int i = 0; i < propertyDescriptorCollection.Count; i++)
+            for (var i = 0; i < propertyDescriptorCollection.Count; i++)
             {
-                PropertyDescriptor propertyDescriptor = propertyDescriptorCollection[i];
-                Type type = propertyDescriptor.PropertyType;
+                var propertyDescriptor = propertyDescriptorCollection[i];
+                var type = propertyDescriptor.PropertyType;
 
                 if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                     type = Nullable.GetUnderlyingType(type);
@@ -920,10 +1149,10 @@ namespace QuickWin
 
                 dataTable.Columns.Add(propertyDescriptor.Name, type);
             }
-            object[] values = new object[propertyDescriptorCollection.Count];
-            foreach (T iListItem in iList)
+            var values = new object[propertyDescriptorCollection.Count];
+            foreach (var iListItem in iList)
             {
-                for (int i = 0; i < values.Length; i++)
+                for (var i = 0; i < values.Length; i++)
                 {
                     values[i] = propertyDescriptorCollection[i].GetValue(iListItem);
                 }

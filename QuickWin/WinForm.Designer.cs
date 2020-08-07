@@ -1,5 +1,4 @@
 ﻿using BrightIdeasSoftware;
-using MetroFramework.Controls;
 
 namespace QuickWin
 {
@@ -31,27 +30,25 @@ namespace QuickWin
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(WinForm));
             this.lstView = new BrightIdeasSoftware.FastObjectListView();
-            this.picBox = new System.Windows.Forms.PictureBox();
             this.lstLog = new BrightIdeasSoftware.FastObjectListView();
             this.chkAllProcs = new System.Windows.Forms.CheckBox();
-            this.metroStyleManager = new MetroFramework.Components.MetroStyleManager(this.components);
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.toolStrip = new System.Windows.Forms.ToolStrip();
             this.lblFilter = new System.Windows.Forms.ToolStripLabel();
             this.txtFilter = new System.Windows.Forms.ToolStripTextBox();
             this.toolStripButton1 = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.tsAllUsers = new System.Windows.Forms.ToolStripButton();
             this.toolStrip2 = new System.Windows.Forms.ToolStrip();
             this.txtNum = new System.Windows.Forms.ToolStripLabel();
             this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
             this.splitLeft = new System.Windows.Forms.SplitContainer();
             this.splitRight = new System.Windows.Forms.SplitContainer();
+            this.picBox = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.lstView)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.picBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.lstLog)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.metroStyleManager)).BeginInit();
-            this.toolStrip1.SuspendLayout();
+            this.toolStrip.SuspendLayout();
             this.toolStrip2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitLeft)).BeginInit();
             this.splitLeft.Panel1.SuspendLayout();
@@ -61,6 +58,7 @@ namespace QuickWin
             this.splitRight.Panel1.SuspendLayout();
             this.splitRight.Panel2.SuspendLayout();
             this.splitRight.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.picBox)).BeginInit();
             this.SuspendLayout();
             // 
             // lstView
@@ -75,7 +73,7 @@ namespace QuickWin
             this.lstView.Name = "lstView";
             this.lstView.ShowGroups = false;
             this.lstView.ShowItemToolTips = true;
-            this.lstView.Size = new System.Drawing.Size(491, 500);
+            this.lstView.Size = new System.Drawing.Size(735, 500);
             this.lstView.TabIndex = 0;
             this.lstView.UseCompatibleStateImageBehavior = false;
             this.lstView.UseExplorerTheme = true;
@@ -87,19 +85,6 @@ namespace QuickWin
             this.lstView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lstView_KeyDown);
             this.lstView.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.lstView_MouseDoubleClick);
             this.lstView.MouseUp += new System.Windows.Forms.MouseEventHandler(this.lstView_MouseUp);
-            // 
-            // picBox
-            // 
-            this.picBox.BackColor = System.Drawing.SystemColors.Window;
-            this.picBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
-            this.picBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.picBox.Location = new System.Drawing.Point(0, 0);
-            this.picBox.Margin = new System.Windows.Forms.Padding(4);
-            this.picBox.Name = "picBox";
-            this.picBox.Size = new System.Drawing.Size(408, 321);
-            this.picBox.TabIndex = 6;
-            this.picBox.TabStop = false;
-            this.picBox.SizeChanged += new System.EventHandler(this.picBox_SizeChanged);
             // 
             // lstLog
             // 
@@ -114,7 +99,7 @@ namespace QuickWin
             this.lstLog.Name = "lstLog";
             this.lstLog.ShowGroups = false;
             this.lstLog.ShowItemToolTips = true;
-            this.lstLog.Size = new System.Drawing.Size(408, 175);
+            this.lstLog.Size = new System.Drawing.Size(362, 177);
             this.lstLog.TabIndex = 11;
             this.lstLog.UseCompatibleStateImageBehavior = false;
             this.lstLog.UseExplorerTheme = true;
@@ -127,29 +112,27 @@ namespace QuickWin
             // 
             this.chkAllProcs.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.chkAllProcs.AutoSize = true;
-            this.chkAllProcs.Location = new System.Drawing.Point(688, 7);
+            this.chkAllProcs.Location = new System.Drawing.Point(886, 7);
             this.chkAllProcs.Name = "chkAllProcs";
             this.chkAllProcs.Size = new System.Drawing.Size(170, 21);
             this.chkAllProcs.TabIndex = 13;
             this.chkAllProcs.Text = "&All Processes (Alt + A)";
             this.chkAllProcs.CheckedChanged += new System.EventHandler(this.chkAllProcs_CheckedChanged);
             // 
-            // metroStyleManager
+            // toolStrip
             // 
-            this.metroStyleManager.Owner = this;
-            // 
-            // toolStrip1
-            // 
-            this.toolStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
+            this.toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.lblFilter,
             this.txtFilter,
-            this.toolStripButton1});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 0);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(903, 31);
-            this.toolStrip1.TabIndex = 15;
-            this.toolStrip1.Text = "toolStrip1";
+            this.toolStripButton1,
+            this.toolStripSeparator1,
+            this.tsAllUsers});
+            this.toolStrip.Location = new System.Drawing.Point(0, 0);
+            this.toolStrip.Name = "toolStrip";
+            this.toolStrip.Size = new System.Drawing.Size(1101, 31);
+            this.toolStrip.TabIndex = 15;
+            this.toolStrip.Text = "toolStrip1";
             // 
             // lblFilter
             // 
@@ -174,6 +157,20 @@ namespace QuickWin
             this.toolStripButton1.Text = "Refresh (F5)";
             this.toolStripButton1.Click += new System.EventHandler(this.btnRefresh_Click);
             // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
+            // 
+            // tsAllUsers
+            // 
+            this.tsAllUsers.Image = ((System.Drawing.Image)(resources.GetObject("tsAllUsers.Image")));
+            this.tsAllUsers.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.tsAllUsers.Name = "tsAllUsers";
+            this.tsAllUsers.Size = new System.Drawing.Size(90, 28);
+            this.tsAllUsers.Text = "All &Users";
+            this.tsAllUsers.Click += new System.EventHandler(this.tsAdmin_Click);
+            // 
             // toolStrip2
             // 
             this.toolStrip2.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -183,7 +180,7 @@ namespace QuickWin
             this.toolStripLabel1});
             this.toolStrip2.Location = new System.Drawing.Point(0, 531);
             this.toolStrip2.Name = "toolStrip2";
-            this.toolStrip2.Size = new System.Drawing.Size(903, 31);
+            this.toolStrip2.Size = new System.Drawing.Size(1101, 31);
             this.toolStrip2.TabIndex = 16;
             this.toolStrip2.Text = "toolStrip2";
             // 
@@ -214,8 +211,8 @@ namespace QuickWin
             // splitLeft.Panel2
             // 
             this.splitLeft.Panel2.Controls.Add(this.splitRight);
-            this.splitLeft.Size = new System.Drawing.Size(903, 500);
-            this.splitLeft.SplitterDistance = 491;
+            this.splitLeft.Size = new System.Drawing.Size(1101, 500);
+            this.splitLeft.SplitterDistance = 735;
             this.splitLeft.TabIndex = 17;
             // 
             // splitRight
@@ -232,19 +229,32 @@ namespace QuickWin
             // splitRight.Panel2
             // 
             this.splitRight.Panel2.Controls.Add(this.lstLog);
-            this.splitRight.Size = new System.Drawing.Size(408, 500);
-            this.splitRight.SplitterDistance = 321;
+            this.splitRight.Size = new System.Drawing.Size(362, 500);
+            this.splitRight.SplitterDistance = 319;
             this.splitRight.TabIndex = 18;
+            // 
+            // picBox
+            // 
+            this.picBox.BackColor = System.Drawing.SystemColors.Window;
+            this.picBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.picBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.picBox.Location = new System.Drawing.Point(0, 0);
+            this.picBox.Margin = new System.Windows.Forms.Padding(4);
+            this.picBox.Name = "picBox";
+            this.picBox.Size = new System.Drawing.Size(362, 319);
+            this.picBox.TabIndex = 6;
+            this.picBox.TabStop = false;
+            this.picBox.SizeChanged += new System.EventHandler(this.picBox_SizeChanged);
             // 
             // WinForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(903, 562);
+            this.ClientSize = new System.Drawing.Size(1101, 562);
             this.Controls.Add(this.splitLeft);
             this.Controls.Add(this.toolStrip2);
             this.Controls.Add(this.chkAllProcs);
-            this.Controls.Add(this.toolStrip1);
+            this.Controls.Add(this.toolStrip);
             this.KeyPreview = true;
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "WinForm";
@@ -255,11 +265,9 @@ namespace QuickWin
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.WinForm_KeyDown);
             this.Resize += new System.EventHandler(this.WinForm_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.lstView)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.picBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.lstLog)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.metroStyleManager)).EndInit();
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
+            this.toolStrip.ResumeLayout(false);
+            this.toolStrip.PerformLayout();
             this.toolStrip2.ResumeLayout(false);
             this.toolStrip2.PerformLayout();
             this.splitLeft.Panel1.ResumeLayout(false);
@@ -270,6 +278,7 @@ namespace QuickWin
             this.splitRight.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitRight)).EndInit();
             this.splitRight.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.picBox)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -281,8 +290,7 @@ namespace QuickWin
         private System.Windows.Forms.PictureBox picBox;
         private FastObjectListView lstLog;
         private System.Windows.Forms.CheckBox chkAllProcs;
-        private MetroFramework.Components.MetroStyleManager metroStyleManager;
-        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.ToolStrip toolStrip;
         private System.Windows.Forms.ToolStripLabel lblFilter;
         private System.Windows.Forms.ToolStripTextBox txtFilter;
         private System.Windows.Forms.ToolStripButton toolStripButton1;
@@ -291,6 +299,8 @@ namespace QuickWin
         private System.Windows.Forms.ToolStripLabel toolStripLabel1;
         private System.Windows.Forms.SplitContainer splitLeft;
         private System.Windows.Forms.SplitContainer splitRight;
+        private System.Windows.Forms.ToolStripButton tsAllUsers;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }
 
